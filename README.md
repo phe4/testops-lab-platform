@@ -6,6 +6,7 @@ Phase 1 builds the backend skeleton with Flask, Flask-SQLAlchemy, MySQL, Docker,
 Phase 2 adds Test Request APIs for creating, listing, viewing, and approving validation requests.
 Phase 3 adds Test Suite APIs and scheduling an approved request into a test job.
 Phase 4 adds fake test execution, logs, results, and report APIs.
+Phase 5 adds a React frontend MVP for the full validation workflow.
 
 ## Phase 1: Backend Skeleton
 
@@ -37,6 +38,12 @@ The backend will be available at:
 
 ```text
 http://localhost:5000
+```
+
+The frontend will be available at:
+
+```text
+http://localhost:3000
 ```
 
 ### Verify the Health Endpoint
@@ -127,6 +134,12 @@ curl -X POST http://localhost:5000/api/test-requests/1/schedule ^
 curl http://localhost:5000/api/test-jobs/1
 ```
 
+### List Test Jobs
+
+```bash
+curl http://localhost:5000/api/test-jobs
+```
+
 ## Phase 4: Run Jobs, Logs, Results, and Reports
 
 ### Run a Test Job
@@ -209,6 +222,62 @@ curl http://localhost:5000/api/test-jobs/3/result
 curl http://localhost:5000/api/reports/5
 ```
 
+## Phase 5: Frontend MVP
+
+### Run the Full Stack
+
+From the project root:
+
+```bash
+docker compose up --build -d
+```
+
+Open the frontend:
+
+```text
+http://localhost:3000
+```
+
+Backend API:
+
+```text
+http://localhost:5000/api
+```
+
+The frontend reads its API base URL from:
+
+```text
+VITE_API_BASE_URL
+```
+
+Docker Compose sets it to:
+
+```text
+http://localhost:5000/api
+```
+
+### Manual Validation Flow
+
+1. Open `http://localhost:3000`.
+2. Go to Create Request.
+3. Submit a validation request.
+4. Open the request detail page.
+5. Approve the request.
+6. Schedule a job with a test suite, lab station, and operator.
+7. Open the Test Jobs page or the scheduled job.
+8. Run the job.
+9. Review logs and result.
+10. Open the report page.
+
+### Frontend Local Commands
+
+From the `frontend` folder:
+
+```bash
+npm install
+npm run build
+```
+
 ### Database Configuration
 
 The backend reads these environment variables:
@@ -227,4 +296,5 @@ Docker Compose sets these automatically for local development.
 - Database migrations are not configured yet.
 - Default test suites are seeded automatically the first time `GET /api/test-suites` is called if the table is empty.
 - Fake diagnostics are synchronous and deterministic. A target serial containing `FAIL` produces a failed result.
-- No authentication, frontend, background jobs, or real hardware test execution has been added yet.
+- The frontend is an MVP and does not include auth, charts, advanced state management, or live updates.
+- No background jobs or real hardware test execution has been added yet.

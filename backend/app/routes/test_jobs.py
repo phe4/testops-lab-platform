@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from app.extensions import db
 from app.models import TestJob, TestLog, TestResult
@@ -8,6 +8,32 @@ from app.services.test_runner import run_fake_diagnostic
 
 
 test_jobs_bp = Blueprint("test_jobs", __name__)
+
+
+@test_jobs_bp.get("/test-jobs")
+def list_test_jobs():
+    query = TestJob.query
+
+    status = request.args.get("status")
+    request_id = request.args.get("requestId")
+    test_suite_id = request.args.get("testSuiteId")
+    lab_station = request.args.get("labStation")
+    operator_name = request.args.get("operatorName")
+
+    if status:
+        query = query.filter(TestJob.status == status)
+    if request_id:
+        query = query.filter(TestJob.request_id == request_id)
+    if test_suite_id:
+        query = query.filter(TestJob.test_suite_id == test_suite_id)
+    if lab_station:
+        query = query.filter(TestJob.lab_station == lab_station)
+    if operator_name:
+        query = query.filter(TestJob.operator_name == operator_name)
+
+    test_jobs = query.order_by(TestJob.created_at.desc()).all()
+
+    return jsonify({"items": [job.to_dict() for job in test_jobs]})
 
 
 @test_jobs_bp.get("/test-jobs/<int:test_job_id>")
