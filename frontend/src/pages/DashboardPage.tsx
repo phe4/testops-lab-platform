@@ -1,38 +1,59 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { apiClient } from "../api/client";
 import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
 import StatusBadge from "../components/StatusBadge";
-import type { TestRequest } from "../types";
-import { formatDate } from "../utils/format";
+import type { DashboardSummary, TestJob, TestRequest } from "../types";
+import { formatDate, getErrorMessage } from "../utils/format";
 
 export default function DashboardPage() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [requests, setRequests] = useState<TestRequest[]>([]);
+  const [recentFailures, setRecentFailures] = useState<TestJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    apiClient
-      .get<{ items: TestRequest[] }>("/test-requests")
-      .then((response) => setRequests(response.data.items))
+    Promise.all([
+      apiClient.get<DashboardSummary>("/dashboard/summary"),
+      apiClient.get<{ items: TestJob[] }>("/dashboard/recent-failures"),
+      apiClient.get<{ items: TestRequest[] }>("/test-requests"),
+    ])
+      .then(([summaryResponse, failuresResponse, requestsResponse]) => {
+        setSummary(summaryResponse.data);
+        setRecentFailures(failuresResponse.data.items);
+        setRequests(requestsResponse.data.items);
+      })
+      .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setIsLoading(false));
   }, []);
 
-  const stats = useMemo(() => {
-    const count = (status: string) =>
-      requests.filter((request) => request.status === status).length;
-
-    return [
-      { label: "Total requests", value: requests.length },
-      { label: "Submitted", value: count("SUBMITTED") },
-      { label: "Approved", value: count("APPROVED") },
-      { label: "Scheduled", value: count("SCHEDULED") },
-      { label: "Completed", value: count("COMPLETED") },
-    ];
-  }, [requests]);
-
   const recentRequests = requests.slice(0, 6);
+  const requestStats = summary
+    ? [
+        { label: "Total Requests", value: summary.totalRequests },
+        { label: "Submitted", value: summary.submittedRequests },
+        { label: "Approved", value: summary.approvedRequests },
+        { label: "Scheduled", value: summary.scheduledRequests },
+        { label: "Completed", value: summary.completedRequests },
+      ]
+    : [];
+  const jobStats = summary
+    ? [
+        { label: "Total Jobs", value: summary.totalJobs },
+        { label: "Pending", value: summary.pendingJobs },
+        { label: "Running", value: summary.runningJobs },
+        { label: "Passed", value: summary.passedJobs },
+        { label: "Failed", value: summary.failedJobs },
+        { label: "Pass Rate", value: `${summary.passRate}%` },
+        {
+          label: "Avg Duration",
+          value: `${summary.averageDurationSeconds}s`,
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -51,22 +72,122 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {isLoading ? (
+      {error ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : isLoading ? (
         <LoadingState />
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-5">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-md border border-slate-200 bg-white p-4"
-              >
-                <p className="text-sm text-slate-500">{stat.label}</p>
-                <p className="mt-2 text-3xl font-semibold text-slate-950">
-                  {stat.value}
-                </p>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Request metrics
+            </h2>
+            <div className="grid gap-4 md:grid-cols-5">
+              {requestStats.map((stat) => (
+                <MetricCard
+                  key={stat.label}
+                  label={stat.label}
+                  value={stat.value}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Job metrics
+            </h2>
+            <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-7">
+              {jobStats.map((stat) => (
+                <MetricCard
+                  key={stat.label}
+                  label={stat.label}
+                  value={stat.value}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-md border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="font-semibold text-slate-950">
+                Recent failed jobs
+              </h2>
+            </div>
+            {recentFailures.length === 0 ? (
+              <div className="p-4">
+                <EmptyState message="No recent failed jobs." />
               </div>
-            ))}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50 text-left text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Job ID</th>
+                      <th className="px-4 py-3 font-medium">Request</th>
+                      <th className="px-4 py-3 font-medium">Test Suite</th>
+                      <th className="px-4 py-3 font-medium">Error Code</th>
+                      <th className="px-4 py-3 font-medium">Duration</th>
+                      <th className="px-4 py-3 font-medium">Finished</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {recentFailures.map((job) => (
+                      <tr key={job.id}>
+                        <td className="px-4 py-3">{job.id}</td>
+                        <td className="px-4 py-3">
+                          {job.request ? (
+                            <Link
+                              to={`/requests/${job.request.id}`}
+                              className="font-medium text-slate-950 hover:text-blue-700"
+                            >
+                              #{job.request.id} {job.request.title}
+                            </Link>
+                          ) : (
+                            `#${job.requestId}`
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {job.testSuite?.name || `#${job.testSuiteId}`}
+                        </td>
+                        <td className="px-4 py-3">
+                          {job.result?.errorCode || "-"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {job.durationSeconds === null
+                            ? "-"
+                            : `${job.durationSeconds}s`}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatDate(job.finishedAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-3">
+                            <Link
+                              to={`/jobs/${job.id}`}
+                              className="font-medium text-blue-700 hover:text-blue-900"
+                            >
+                              View Job
+                            </Link>
+                            {job.requestId ? (
+                              <Link
+                                to={`/reports/${job.requestId}`}
+                                className="font-medium text-blue-700 hover:text-blue-900"
+                              >
+                                View Report
+                              </Link>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <section className="rounded-md border border-slate-200 bg-white">
@@ -117,6 +238,21 @@ export default function DashboardPage() {
           </section>
         </>
       )}
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-4">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-semibold text-slate-950">{value}</p>
     </div>
   );
 }
