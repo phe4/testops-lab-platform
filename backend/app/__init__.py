@@ -3,6 +3,7 @@ from flask_cors import CORS
 
 from app.config import Config
 from app.extensions import db
+from app.routes.dashboard import dashboard_bp
 from app.routes.health import health_bp
 from app.routes.reports import reports_bp
 from app.routes.test_jobs import test_jobs_bp
@@ -17,6 +18,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
 
+    app.register_blueprint(dashboard_bp, url_prefix="/api")
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(test_requests_bp, url_prefix="/api")
     app.register_blueprint(test_suites_bp, url_prefix="/api")

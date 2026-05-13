@@ -6,17 +6,19 @@ import EmptyState from "../components/EmptyState";
 import LoadingState from "../components/LoadingState";
 import StatusBadge from "../components/StatusBadge";
 import type { TestRequest } from "../types";
-import { formatDate } from "../utils/format";
+import { formatDate, getErrorMessage } from "../utils/format";
 
 export default function RequestsListPage() {
   const [requests, setRequests] = useState<TestRequest[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     apiClient
       .get<{ items: TestRequest[] }>("/test-requests")
       .then((response) => setRequests(response.data.items))
+      .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -70,6 +72,10 @@ export default function RequestsListPage() {
 
       {isLoading ? (
         <LoadingState />
+      ) : error ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
+        </div>
       ) : visibleRequests.length === 0 ? (
         <EmptyState message="No test requests match this view." />
       ) : (

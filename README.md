@@ -63,6 +63,18 @@ Expected response:
 }
 ```
 
+### Dashboard Summary
+
+```bash
+curl http://localhost:5000/api/dashboard/summary
+```
+
+### Dashboard Recent Failures
+
+```bash
+curl http://localhost:5000/api/dashboard/recent-failures
+```
+
 ## Phase 2: Test Request APIs
 
 ### Create a Test Request
@@ -259,15 +271,17 @@ http://localhost:5000/api
 ### Manual Validation Flow
 
 1. Open `http://localhost:3000`.
-2. Go to Create Request.
-3. Submit a validation request.
-4. Open the request detail page.
-5. Approve the request.
-6. Schedule a job with a test suite, lab station, and operator.
-7. Open the Test Jobs page or the scheduled job.
-8. Run the job.
-9. Review logs and result.
-10. Open the report page.
+2. Confirm dashboard request and job metrics load.
+3. Confirm recent requests and recent failed jobs sections load.
+4. Go to Create Request.
+5. Submit a validation request.
+6. Open the request detail page.
+7. Approve the request.
+8. Schedule a job with a test suite, lab station, and operator.
+9. Open the Test Jobs page or the scheduled job.
+10. Run the job.
+11. Review logs and result.
+12. Open the report page.
 
 ### Frontend Local Commands
 

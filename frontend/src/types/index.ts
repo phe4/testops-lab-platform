@@ -95,3 +95,18 @@ export interface ReportResponse {
     result: TestResult | null;
   }>;
 }
+
+export interface DashboardSummary {
+  totalRequests: number;
+  submittedRequests: number;
+  approvedRequests: number;
+  scheduledRequests: number;
+  completedRequests: number;
+  totalJobs: number;
+  pendingJobs: number;
+  runningJobs: number;
+  passedJobs: number;
+  failedJobs: number;
+  passRate: number;
+  averageDurationSeconds: number;
+}

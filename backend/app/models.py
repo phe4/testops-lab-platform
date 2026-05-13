@@ -101,7 +101,7 @@ class TestJob(TimestampMixin, db.Model):
         uselist=False,
     )
 
-    def to_dict(self, include_details=False):
+    def to_dict(self, include_details=False, include_result=False):
         data = {
             "id": self.id,
             "requestId": self.request_id,
@@ -132,6 +132,8 @@ class TestJob(TimestampMixin, db.Model):
 
         if include_details:
             data["logs"] = [log.to_dict() for log in self.logs]
+            data["result"] = self.result.to_dict() if self.result else None
+        elif include_result:
             data["result"] = self.result.to_dict() if self.result else None
 
         return data
